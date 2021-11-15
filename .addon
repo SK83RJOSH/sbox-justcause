@@ -1,0 +1,17 @@
+{
+	"type": "game",
+	"ident": "ske.justcause",
+	"sharedassets": "*.*",
+	"depends": [
+		"facepunch.base",
+		"facepunch.citizen",
+		"facepunch.rust"
+	],
+	"gamemodes": [
+		{
+			"name": "Just Cause",
+			"title": "Just Cause Mode",
+			"description": "Party like you're Rico Rodriguez!"
+		}
+	]
+}

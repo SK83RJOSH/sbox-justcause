@@ -1,0 +1,15 @@
+{
+	"editor.tabSize": 4,
+	"editor.insertSpaces": false,
+	"editor.formatOnSave": true,
+	"editor.formatOnType": true,
+	"editor.formatOnPaste": true,
+	"editor.renderFinalNewline": true,
+	"omnisharp.enableEditorConfigSupport": true,
+	"omnisharp.enableRoslynAnalyzers": true,
+	"omnisharp.enableImportCompletion": true,
+	"omnisharp.enableMsBuildLoadProjectsOnDemand": true,
+	"[csharp]": {
+		"editor.defaultFormatter": "ms-dotnettools.csharp"
+	},
+}

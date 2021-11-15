@@ -1,0 +1,6 @@
+.vs
+code/obj
+code/Properties
+code/*.csproj
+.intermediate
+tools_asset_info.bin

@@ -1,0 +1,7 @@
+{
+    "recommendations": [
+        "ms-dotnettools.csharp",
+        "Gruntfuggly.todo-tree",
+        "eamodio.gitlens",
+    ]
+}
