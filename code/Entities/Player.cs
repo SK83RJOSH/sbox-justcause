@@ -1,13 +1,20 @@
 namespace JustCause.Entities;
 
+using JustCause.FileFormats.PropertyContainer;
+using JustCause.FileFormats.SmallArchive;
+using JustCause.Resources;
 using Sandbox;
 using System.Collections.Generic;
+using System.IO;
+using PropertyContainer = FileFormats.PropertyContainer.PropertyContainer<uint>;
+using PropertyFile = FileFormats.PropertyContainer.PropertyFile<uint>;
 
 partial class Player : Sandbox.Player
 {
 	public readonly Clothing.Container Clothing = new();
 
 	private DamageInfo lastDamage;
+	private ResourceLoader ResourceLoader = new();
 
 	public override void Respawn()
 	{
@@ -60,40 +67,82 @@ partial class Player : Sandbox.Player
 
 		if (IsServer && Input.Pressed(InputButton.Use))
 		{
-			string archive = "";
 			List<string> files = new();
+			string archive_path = "";
+			string vdoll_path = "";
 
 			/* Havoc */
-			//archive = "arve.v060_attackheli.ee";
-			//files = new() { "v060-body_m_lod1", "v060_lod1-tail", "v060_lod1-door_fu1" };
+			archive_path = "assets\\arve.v060_attackheli.ee";
+			vdoll_path = "v060_attackheli.mvdoll";
 
 			/* Tuk-Tuk */
-			archive = "lave.v005_tuktuk_civ.ee";
-			files = new() { "v005civ-body_m_lod1", "v005civ_lod1-uppersteering" };
+			//archive_path = "assets\\lave.v005_tuktuk_civ.ee";
+			//vdoll_path = "v005_tuktuk_civ.mvdoll";
 
 			/* APC */
-			//archive = "lave.v016_military_apc.ee";
-			//files = new() { "v016_lod1-base", "v016_lod1-lavett", "v016_lod1-mount", "v016_lod1-tanksuspension", "v016_lod1-weapon", "v016-body_m_lod1" };
+			//archive_path = "assets\\lave.v016_military_apc.ee";
+			//vdoll_path = "v016_military_apc.mvdoll";
 
 			/* balloon */
-			//archive = "ballonfighter.ee";
+			//archive_path = "assets\\ballonfighter.ee";
 			//files = new() { "gb400_lod1-a", "gb400_lod1-b", "gb400_lod1-c", "gb400_lod1-d" };
 
 			/* concrete barrier */
-			//archive = "dropoffpoint.car.ee";
+			//archive_path = "assets\\dropoffpoint.car.ee";
 			//files = new() { "go180_lod1-b" };
 
 			/* JUMBO jet */
-			//archive = "arve.v114_jumbojet.ee";
-			//files = new() { "v114-wing_cr1_m_lod1", "v114-wing_cl1_m_lod1", "v114-body_m_lod1", "v114_lod1-suspension_cr1", "v114_lod1-suspension_fd", "v114_lod1-stabilizer_bc1", "v114_lod1-suspension_cl1" };
+			//archive_path = "assets\\arve.v114_jumbojet.ee";
+			//vdoll_path = "v114_jumbojet.mvdoll";
 
 			/* dish */
-			//archive = "f3m02.radarstation.nlz";
+			//archive_path = "assets\\f3m02.radarstation.nlz";
 			//files = new() { "go098_lod1-a", "go098_lod1-b" };
+
+			if (ResourceLoader.LoadArchive(archive_path, out SmallArchive archive) && archive.TryGetFile(vdoll_path, out MemoryStream prop_stream))
+			{
+				PropertyFile file = new();
+				PropertyContainer container = new();
+
+				if (file.Load(new BinaryReader(prop_stream), container))
+				{
+					if (!container.GetContainer("_vdoll", out PropertyContainer vdoll))
+					{
+						return;
+					}
+
+					if (!vdoll.GetContainer("_parts", out PropertyContainer parts))
+					{
+						return;
+					}
+
+					foreach (PropertyContainer part in parts.GetContainers())
+					{
+						if (part.GetValue("model_shrt", out string model_name))
+						{
+							RenderBlockModel entity = new(archive_path, model_name);
+							entity.Position = Position;
+							entity.Rotation = Rotation;
+						}
+
+						foreach (PropertyContainer child_part in part.GetContainers())
+						{
+							if (child_part.GetValue("model_shrt", out string child_model_name))
+							{
+								RenderBlockModel entity = new(archive_path, child_model_name);
+								entity.Position = Position;
+								entity.Rotation = Rotation;
+							}
+						}
+					}
+
+					Log.Info("Success!");
+				}
+			}
 
 			foreach (string part in files)
 			{
-				RenderBlockModel entity = new("assets\\" + archive, part + ".rbm");
+				RenderBlockModel entity = new(archive_path, part + ".rbm");
 				entity.Position = Position;
 				entity.Rotation = Rotation;
 			}

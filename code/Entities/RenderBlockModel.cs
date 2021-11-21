@@ -1,11 +1,11 @@
 namespace JustCause.Entities;
 
+using JustCause.FileFormats.Utilities;
 using JustCause.Resources;
-using JustCause.FileFormats.PropertyContainer;
 using Sandbox;
+using System.Collections.Generic;
 using System.IO;
-using PropertyContainer = FileFormats.PropertyContainer.PropertyContainer<uint>;
-using PropertyFile = FileFormats.PropertyContainer.PropertyFile<uint>;
+using System.Text;
 
 [Library]
 public partial class RenderBlockModel : AnimEntity
@@ -35,42 +35,29 @@ public partial class RenderBlockModel : AnimEntity
 
 		ResourceLoader.LoadArchive("assets\\general.blz");
 		var archive = ResourceLoader.LoadArchive(ArchivePath);
-		SetModel(ResourceLoader.LoadModel(ArchiveFileName));
 
-		if (archive.TryGetFile("v005_tuktuk_civ.mvdoll"/*ee.epe*/, out MemoryStream prop_stream))
+		if (!archive.TryGetFile(ArchiveFileName, out MemoryStream stream))
 		{
-			PropertyFile file = new();
-			PropertyContainer container = new();
+			return;
+		}
 
-			if (file.Load(new BinaryReader(prop_stream), container))
+		List<byte> characters = new();
+		BinaryReader reader = new(stream);
+
+		while (reader.Read(out byte character, Endian.Big) != 0 && (character != '\r' || character == '\n'))
+		{
+			characters.Add(character);
+		}
+
+		string lod = Encoding.ASCII.GetString(characters.ToArray());
+
+		if (lod != "")
+		{
+			string[] parts = lod.Split('\\');
+
+			if (ResourceLoader.LoadModel(parts[parts.Length - 1].ToLower(), out Model model))
 			{
-				if (!container.GetContainer("_vdoll", out PropertyContainer vdoll))
-				{
-					return;
-				}
-
-				if (!vdoll.GetContainer("_parts", out PropertyContainer parts))
-				{
-					return;
-				}
-
-				foreach (PropertyContainer part in parts.GetContainers())
-				{
-					if (part.GetValue("model_shrt", out string model_name))
-					{
-						Log.Info($"Model Name: {model_name}");
-					}
-
-					foreach (PropertyContainer child_part in part.GetContainers())
-					{
-						if (child_part.GetValue("model_shrt", out string child_model_name))
-						{
-							Log.Info($"Model Name: {child_model_name}");
-						}
-					}
-				}
-
-				Log.Info("Success!");
+				SetModel(model);
 			}
 		}
 	}

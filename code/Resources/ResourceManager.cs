@@ -253,7 +253,7 @@ public static class ResourceManager
 
 	public static bool LoadArchive(string path, out SmallArchive archive)
 	{
-		if (LoadedArchives.ContainsKey(path) && !DisableCache)
+		if (LoadedArchives.ContainsKey(path))
 		{
 			archive = LoadedArchives[path];
 			return true;
@@ -266,12 +266,8 @@ public static class ResourceManager
 		}
 
 		archive = new SmallArchive(FileSystem.Mounted.OpenRead(path));
-
-		if (!DisableCache)
-		{
-			LoadedArchives[path] = archive;
-		}
-
+		
+		LoadedArchives[path] = archive;
 		return true;
 	}
 
