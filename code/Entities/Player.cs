@@ -60,20 +60,40 @@ partial class Player : Sandbox.Player
 
 		if (IsServer && Input.Pressed(InputButton.Use))
 		{
-			List<string> parts = new();
+			string archive = "";
+			List<string> files = new();
 
 			/* Havoc */
-			//parts = new() { "v060-body_m_lod1", "v060_lod1-tail", "v060_lod1-door_fu1" };
+			//archive = "arve.v060_attackheli.ee";
+			//files = new() { "v060-body_m_lod1", "v060_lod1-tail", "v060_lod1-door_fu1" };
 
 			/* Tuk-Tuk */
-			//parts = new() { "v005civ-body_m_lod1", "v005civ_lod1-uppersteering" };
+			archive = "lave.v005_tuktuk_civ.ee";
+			files = new() { "v005civ-body_m_lod1", "v005civ_lod1-uppersteering" };
 
 			/* APC */
-			//parts = new() { "v016_lod1-base", "v016_lod1-lavett", "v016_lod1-mount", "v016_lod1-tanksuspension", "v016_lod1-weapon", "v016-body_m_lod1" };
+			//archive = "lave.v016_military_apc.ee";
+			//files = new() { "v016_lod1-base", "v016_lod1-lavett", "v016_lod1-mount", "v016_lod1-tanksuspension", "v016_lod1-weapon", "v016-body_m_lod1" };
 
-			foreach (string part in parts)
+			/* balloon */
+			//archive = "ballonfighter.ee";
+			//files = new() { "gb400_lod1-a", "gb400_lod1-b", "gb400_lod1-c", "gb400_lod1-d" };
+
+			/* concrete barrier */
+			//archive = "dropoffpoint.car.ee";
+			//files = new() { "go180_lod1-b" };
+
+			/* JUMBO jet */
+			//archive = "arve.v114_jumbojet.ee";
+			//files = new() { "v114-wing_cr1_m_lod1", "v114-wing_cl1_m_lod1", "v114-body_m_lod1", "v114_lod1-suspension_cr1", "v114_lod1-suspension_fd", "v114_lod1-stabilizer_bc1", "v114_lod1-suspension_cl1" };
+
+			/* dish */
+			//archive = "f3m02.radarstation.nlz";
+			//files = new() { "go098_lod1-a", "go098_lod1-b" };
+
+			foreach (string part in files)
 			{
-				RenderBlockEntity entity = new("assets\\" + part + ".rbm");
+				RenderBlockModel entity = new("assets\\" + archive, part + ".rbm");
 				entity.Position = Position;
 				entity.Rotation = Rotation;
 			}
