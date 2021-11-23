@@ -23,6 +23,20 @@ public class PropertyNode<KeyType> where KeyType : struct, IConvertible
 	public PropertyNode(PropertyContainer<KeyType> value) : this(NodeType.Container, value) { }
 	public PropertyNode(PropertyVariant value) : this(NodeType.Variant, value) { }
 
+	public bool Contains<ValueType>()
+	{
+		if (typeof(ValueType) == typeof(PropertyVariant))
+		{
+			return Type == NodeType.Variant;
+		}
+		else if (typeof(ValueType) == typeof(PropertyContainer<KeyType>))
+		{
+			return Type == NodeType.Container;
+		}
+
+		return false;
+	}
+
 	protected bool GetValue<ValueType>(NodeType type, out ValueType value) where ValueType : class
 	{
 		if (Type == type)

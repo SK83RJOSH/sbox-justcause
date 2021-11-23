@@ -85,7 +85,16 @@ public class PropertyVariant
 	static protected Dictionary<Type, VariantType> TypeToVariantType = new Dictionary<Type, VariantType>
 	{
 		{ typeof(int), VariantType.Integer },
+		{ typeof(uint), VariantType.Integer },
+		{ typeof(short), VariantType.Integer },
+		{ typeof(ushort), VariantType.Integer },
+		{ typeof(long), VariantType.Integer },
+		{ typeof(ulong), VariantType.Integer },
+		{ typeof(sbyte), VariantType.Integer },
+		{ typeof(byte), VariantType.Integer },
+		{ typeof(bool), VariantType.Integer },
 		{ typeof(float), VariantType.Float },
+		{ typeof(double), VariantType.Float },
 		{ typeof(string), VariantType.String },
 		{ typeof(Vec2), VariantType.Vec2 },
 		{ typeof(Vec3), VariantType.Vec3 },
@@ -124,25 +133,102 @@ public class PropertyVariant
 
 	public bool AssignValue<ValueType>(ValueType value)
 	{
+		if (typeof(ValueType).IsEnum)
+		{
+			Type = VariantType.Integer;
+			Value = (int)(object)value;
+			return true;
+		}
+
 		if (TypeToVariantType.TryGetValue(value.GetType(), out VariantType type))
 		{
 			Type = type;
-			Value = value;
+
+			if (type == VariantType.Integer)
+			{
+				Value = Convert.ToInt32(value);
+			}
+			else if (type == VariantType.Float)
+			{
+				Value = Convert.ToSingle(value);
+			}
+			else
+			{
+				Value = value;
+			}
+
 			return true;
 		}
 
 		return false;
 	}
 
-	public bool GetValue<ValueType>(out ValueType value)
+	public bool GetValue<ValueType>(out ValueType value, ValueType default_value = default)
 	{
-		if (TypeToVariantType.TryGetValue(typeof(ValueType), out VariantType type) && Type == type)
+		if (typeof(ValueType).IsEnum && Type == VariantType.Integer && typeof(ValueType).IsEnumDefined(Value))
 		{
 			value = (ValueType)Value;
 			return true;
 		}
 
-		value = default;
+		if (typeof(ValueType) == typeof(bool) && Type == VariantType.Integer)
+		{
+			value = (ValueType)(object)Convert.ToBoolean((int)Value);
+			return true;
+		}
+
+		if (TypeToVariantType.TryGetValue(typeof(ValueType), out VariantType type) && Type == type)
+		{
+			Type value_type = typeof(ValueType);
+
+			if (Type == VariantType.Integer)
+			{
+				if (value_type == typeof(int) || value_type == typeof(short) || value_type == typeof(long) || value_type == typeof(sbyte))
+				{
+					int int_value = (int)Value;
+					value = (ValueType)(object)(true switch
+					{
+						true when value_type == typeof(short)  => Convert.ToInt16(int_value),
+						true when value_type == typeof(int) => Convert.ToInt32(int_value),
+						true when value_type == typeof(long) => Convert.ToInt64(int_value),
+						true when value_type == typeof(sbyte) => Convert.ToSByte(int_value),
+						_ => null
+					});
+					return true;
+				}
+				else if (value_type == typeof(uint) || value_type == typeof(ushort) || value_type == typeof(ulong) || value_type == typeof(byte))
+				{
+					uint uint_value = BitConverter.ToUInt32(BitConverter.GetBytes((int)Value));
+					value = (ValueType)(object)(true switch
+					{
+						true when value_type == typeof(ushort) => Convert.ToUInt16(uint_value),
+						true when value_type == typeof(uint) => Convert.ToUInt32(uint_value),
+						true when value_type == typeof(ulong) => Convert.ToUInt64(uint_value),
+						true when value_type == typeof(byte) => Convert.ToByte(uint_value),
+						_ => null
+					});
+					return true;
+				}
+			}
+			else if (Type == VariantType.Float)
+			{
+				float float_value = (float)Value;
+				value = (ValueType)(object)(true switch
+				{
+					true when value_type == typeof(float) => Convert.ToSingle(float_value),
+					true when value_type == typeof(double) => Convert.ToDouble(float_value),
+					_ => null
+				});
+				return true;
+			}
+			else
+			{
+				value = (ValueType)Value;
+				return true;
+			}
+		}
+
+		value = default_value;
 		return false;
 	}
 }
