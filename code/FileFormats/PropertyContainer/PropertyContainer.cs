@@ -23,7 +23,7 @@ public static class PropertyContainerExtensions
 		=> enumerator;
 }
 
-public class PropertyContainer<KeyType> where KeyType : struct, IConvertible
+public partial class PropertyContainer<KeyType> where KeyType : struct, IConvertible
 {
 	protected Dictionary<KeyType, PropertyNode<KeyType>> KeyToNode = new();
 

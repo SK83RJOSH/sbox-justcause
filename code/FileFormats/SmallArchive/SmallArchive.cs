@@ -1,51 +1,56 @@
 ﻿namespace JustCause.FileFormats.SmallArchive;
 
+using JustCause.FileFormats.Utilities;
 using System;
 using System.Collections.Generic;
 using System.IO;
 
-public class SmallArchive
+public partial class SmallArchive
 {
-	private SmallArchiveFile File = new();
-	private byte[] Data = Array.Empty<byte>();
-	private Dictionary<string, SmallArchiveFile.Entry> Entries = new();
-
-	public MemoryStream this[string name] => GetFile(name);
-	public bool ContainsFile(string name) => Entries.ContainsKey(name);
-
-	public SmallArchive(Stream stream)
+	public partial class File
 	{
-		BinaryReader reader = new(stream);
+		public string Name { get; private set; }
+		public uint Offset { get; private set; }
+		public uint Size { get; private set; }
 
-		stream.Seek(0, SeekOrigin.Begin);
-		File.Deserialize(reader);
-
-		stream.Seek(0, SeekOrigin.Begin);
-		Data = reader.ReadBytes((int)stream.Length);
-
-		foreach (SmallArchiveFile.Entry entry in File.Entries)
+		public File(string name, uint offset, uint size)
 		{
-			if (Entries.ContainsKey(entry.Name))
-			{
-				continue;
-			}
-
-			Entries.Add(entry.Name, entry);
+			Name = name;
+			Offset = offset;
+			Size = size;
 		}
 	}
 
-	public MemoryStream GetFile(string name)
+	private Dictionary<uint, File> Files = new();
+	private byte[] Data = Array.Empty<byte>();
+
+	public MemoryStream this[uint key] => GetFile(key);
+	public MemoryStream this[string name] => GetFile(name);
+
+	public bool ContainsFile(uint key) => Files.ContainsKey(key);
+	public bool ContainsFile(string name) => Files.ContainsKey(name.HashJenkins());
+
+	public MemoryStream GetFile(string name) => GetFile(name.HashJenkins());
+	public bool TryGetFile(string name, out MemoryStream value) => TryGetFile(name.HashJenkins(), out value);
+
+	public SmallArchive(Dictionary<uint, File> files, byte[] data)
 	{
-		if (ContainsFile(name))
+		Files = files;
+		Data = data;
+	}
+
+	public MemoryStream GetFile(uint key)
+	{
+		if (ContainsFile(key))
 		{
-			SmallArchiveFile.Entry entry = Entries[name];
-			return new MemoryStream(Data, (int)entry.Offset, (int)entry.Size, false);
+			File file = Files[key];
+			return new MemoryStream(Data, (int)file.Offset, (int)file.Size, false);
 		}
 
 		return null;
 	}
 
-	public bool TryGetFile(string name, out MemoryStream value)
+	public bool TryGetFile(uint name, out MemoryStream value)
 	{
 		value = GetFile(name);
 		return value != null;

@@ -44,7 +44,7 @@ public partial class RenderBlockModel : AnimEntity
 		List<byte> characters = new();
 		BinaryReader reader = new(stream);
 
-		while (reader.Read(out byte character, Endian.Big) != 0 && (character != '\r' || character == '\n'))
+		while (reader.Read(out byte character, Endian.Big) == 1 && (character != '\r' || character == '\n'))
 		{
 			characters.Add(character);
 		}

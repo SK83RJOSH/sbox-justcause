@@ -259,14 +259,20 @@ public static class ResourceManager
 			return true;
 		}
 
+		archive = default;
+
 		if (!FileSystem.Mounted.FileExists(path))
 		{
-			archive = default;
 			return false;
 		}
 
-		archive = new SmallArchive(FileSystem.Mounted.OpenRead(path));
-		
+		using BinaryReader reader = new(FileSystem.Mounted.OpenRead(path));
+
+		if (!SmallArchive.Read(reader, out archive))
+		{
+			return false;
+		}
+
 		LoadedArchives[path] = archive;
 		return true;
 	}
