@@ -3,7 +3,7 @@ namespace JustCause.FileFormats.Utilities;
 using System;
 using System.Text;
 
-public static class StringHelpers
+public static class StringExtensions
 {
 	private static uint HashJenkins(byte[] data, int index, int length, uint seed)
 	{

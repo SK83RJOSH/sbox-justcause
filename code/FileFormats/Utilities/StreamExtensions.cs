@@ -11,7 +11,7 @@ public enum Endian
 	Big
 }
 
-public static class StreamHelpers
+public static class StreamExtensions
 {
 	private static T ChangeType<T, V>(V value)
 	{
