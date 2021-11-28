@@ -2,41 +2,55 @@ namespace JustCause.FileFormats.RenderBlockModel.RenderBlocks;
 
 using JustCause.FileFormats.RenderBlockModel.DataTypes;
 using JustCause.FileFormats.Utilities;
-using System;
-using System.Collections.Generic;
 using System.IO;
 
-[Sandbox.Library]
-public struct Lambert : IRenderBlock
+public class Lambert : IRenderBlock
 {
-	public byte Version;
 	public LambertAttributes Attributes;
 	public Material Material;
-	public List<GeneralVertex> Vertices = new();
-	public List<short> Indices = new();
+	public GeneralVertex[] Vertices;
+	public short[] Indices;
 
-	public void Deserialize(BinaryReader reader, Endian endian)
+	public static bool Read(BinaryReader reader, out Lambert block, Endian endian)
 	{
-		Version = reader.ReadByte();
+		block = new();
 
-		if (Version == 1 || Version > 4)
+		if (!reader.Read(out byte version) || version == 1 || version > 4)
 		{
-			throw new FormatException("unhandled Lambert version");
+			// unhandled version
+			return false;
 		}
 
-		Attributes.Deserialize(reader, endian, Version);
-		Material.Deserialize(reader, endian);
-
-		Vertices.Clear();
-		Vertices.Capacity = reader.ReadInt32();
-
-		for (int i = 0; i < Vertices.Capacity; ++i)
+		if (!reader.Read(out block.Attributes, version, endian))
 		{
-			GeneralVertex vertex = new();
-			vertex.Deserialize(reader, endian, Attributes.VertexInfo.Format);
-			Vertices.Add(vertex);
+			return false;
 		}
 
-		reader.ReadList(Indices, endian);
+		if (!reader.Read(out block.Material, endian))
+		{
+			return false;
+		}
+
+		VertexFormat format = block.Attributes.VertexInfo.Format;
+
+		if (!reader.Read(out block.Vertices, format, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out block.Indices, endian))
+		{
+			return false;
+		}
+
+		return true;
+	}
+}
+
+public static partial class BinaryReaderExtensions
+{
+	public static bool Read(this BinaryReader reader, out Lambert block, Endian endian = default)
+	{
+		return Lambert.Read(reader, out block, endian);
 	}
 }

@@ -1,18 +1,14 @@
 namespace JustCause.FileFormats.RenderBlockModel;
 
 using JustCause.FileFormats.Utilities;
-using System;
+using JustCause.FileFormats.RenderBlockModel.RenderBlocks;
 using System.Collections.Generic;
+using System.IO;
+using System;
 
 public static class BlockTypeFactory
 {
 	private static readonly Dictionary<uint, string> HashesToNames = new();
-	private static readonly Dictionary<uint, Type> HashesToTypes = new();
-
-	private static void Register<T>(string name) where T : IRenderBlock
-	{
-		HashesToTypes.Add(name.HashJenkins(), typeof(T));
-	}
 
 	public static string GetName(uint type)
 	{
@@ -24,90 +20,120 @@ public static class BlockTypeFactory
 		return null;
 	}
 
-	public static IRenderBlock Create(uint type)
+	private static bool Read(BinaryReader reader, out IRenderBlock render_block, uint type, Endian endian)
 	{
-		if (HashesToTypes.ContainsKey(type))
+		render_block = null;
+
+		string name = GetName(type);
+
+		if (name == null)
 		{
-			return Sandbox.Library.Create<object>(HashesToTypes[type]) as IRenderBlock;
+			return false;
 		}
 
-		return null;
+		switch (name)
+		{
+			case "CarPaint":
+				{ return reader.Read(out CarPaint block, endian) && (render_block = block) != null; }
+			case "CarPaintSimple":
+				{ return reader.Read(out CarPaintSimple block, endian) && (render_block = block) != null; }
+			case "DeformableWindow":
+				{ return reader.Read(out DeformableWindow block, endian) && (render_block = block) != null; }
+			case "General":
+				{ return reader.Read(out General block, endian) && (render_block = block) != null; }
+			case "Halo":
+				{ return reader.Read(out Halo block, endian) && (render_block = block) != null; }
+			case "Lambert":
+				{ return reader.Read(out Lambert block, endian) && (render_block = block) != null; }
+			default:
+				throw new NotSupportedException($"unhandled block type {name} (0x{type:X8})");
+		}
 	}
 
-	public static IRenderBlock Create(string type)
+	private static bool VerifyBlockFooter(BinaryReader reader, Endian endian)
 	{
-		return Create(type.HashJenkins());
+		if (!reader.Read(out uint footer, endian) || footer != 0x89ABCDEF)
+		{
+			throw new FormatException("invalid block footer (data corrupt or misread)");
+		}
+
+		return true;
+	}
+
+	public static bool Read(BinaryReader reader, out IRenderBlock render_block, Endian endian)
+	{
+		render_block = default;
+
+		if (!reader.Read(out uint type, endian))
+		{
+			return false;
+		}
+
+		return Read(reader, out render_block, type, endian) && VerifyBlockFooter(reader, endian);
 	}
 
 	static BlockTypeFactory()
 	{
 		string[] Names = new[]
 		{
-				"2DTex1",
-				"2DTex2",
-				"3DText",
-				"AOBox",
-				"Beam",
-				"BillboardFoliage",
-				"Box",
-				"Bullet",
-				"CarPaint",
-				"CarPaintSimple",
-				"CirrusClouds",
-				"Clouds",
-				"Creatures",
-				"DecalDeformable",
-				"DecalSimple",
-				"DecalSkinned",
-				"DeformableWindow",
-				"Facade",
-				"Flag",
-				"FogGradient",
-				"Font",
-				"General",
-				"Grass",
-				"GuiAnark",
-				"Halo",
-				"Lambert",
-				"Leaves",
-				"Lights",
-				"Line",
-				"Merged",
-				"NvWaterHighEnd",
-				"Occluder",
-				"Open",
-				"Particle",
-				"Skidmarks",
-				"SkinnedGeneral",
-				"SkyGradient",
-				"SoftClouds",
-				"SplineRoad",
-				"Stars",
-				"Terrain",
-				"TerrainForest",
-				"TerrainForestFin",
-				"TreeImpostorTrunk",
-				"TreeImpostorTop",
-				"Triangle",
-				"VegetationBark",
-				"VegetationFoliage",
-				"WaterGodrays",
-				"WaterHighEnd",
-				"WaterWaves",
-				"Weather",
-				"Window",
-			};
+			"2DTex1",
+			"2DTex2",
+			"3DText",
+			"AOBox",
+			"Beam",
+			"BillboardFoliage",
+			"Box",
+			"Bullet",
+			"CarPaint",
+			"CarPaintSimple",
+			"CirrusClouds",
+			"Clouds",
+			"Creatures",
+			"DecalDeformable",
+			"DecalSimple",
+			"DecalSkinned",
+			"DeformableWindow",
+			"Facade",
+			"Flag",
+			"FogGradient",
+			"Font",
+			"General",
+			"Grass",
+			"GuiAnark",
+			"Halo",
+			"Lambert",
+			"Leaves",
+			"Lights",
+			"Line",
+			"Merged",
+			"NvWaterHighEnd",
+			"Occluder",
+			"Open",
+			"Particle",
+			"Skidmarks",
+			"SkinnedGeneral",
+			"SkyGradient",
+			"SoftClouds",
+			"SplineRoad",
+			"Stars",
+			"Terrain",
+			"TerrainForest",
+			"TerrainForestFin",
+			"TreeImpostorTrunk",
+			"TreeImpostorTop",
+			"Triangle",
+			"VegetationBark",
+			"VegetationFoliage",
+			"WaterGodrays",
+			"WaterHighEnd",
+			"WaterWaves",
+			"Weather",
+			"Window",
+		};
 
 		foreach (string Name in Names)
 		{
 			HashesToNames.Add(Name.HashJenkins(), Name);
 		}
-
-		Register<RenderBlocks.CarPaint>("CarPaint");
-		Register<RenderBlocks.CarPaintSimple>("CarPaintSimple");
-		Register<RenderBlocks.DeformableWindow>("DeformableWindow");
-		Register<RenderBlocks.General>("General");
-		Register<RenderBlocks.Halo>("Halo");
-		Register<RenderBlocks.Lambert>("Lambert");
 	}
 }

@@ -2,34 +2,54 @@ namespace JustCause.FileFormats.RenderBlockModel.RenderBlocks;
 
 using JustCause.FileFormats.RenderBlockModel.DataTypes;
 using JustCause.FileFormats.Utilities;
-using System;
 using System.IO;
+using Vector2f = DataTypes.Vector2<float>;
+using Vector3f = DataTypes.Vector3<float>;
+using Vector4b = DataTypes.Vector4<byte>;
 
-[Sandbox.Library]
-public struct Halo : IRenderBlock
+public class Halo : IRenderBlock
 {
-	public byte Version;
-	public Vector3<float> Position;
-	public Vector2<float> UV;
-	public Vector2<float> Size;
-	public Vector4<byte> Color;
+	public Vector3f Position;
+	public Vector2f UV;
+	public Vector2f Size;
+	public Vector4b Color;
 
-	public void Deserialize(BinaryReader reader, Endian endian)
+	public static bool Read(BinaryReader reader, out Halo block, Endian endian = default)
 	{
-		Version = reader.ReadByte();
+		block = new();
 
-		if (Version != 0)
+		if (!reader.Read(out byte version, endian) || version != 0)
 		{
-			throw new FormatException("unhandled Halo version");
+			// unhandled Halo version
+			return false;
 		}		
 
-		Position.Deserialize(reader, endian);
+		if (!reader.Read(out block.Position, endian))
+		{
+			return false;
+		}
 
-		Vector4<byte> PackedData = default;
-		PackedData.Deserialize(reader, endian);
-		UV = new Vector2<float>(PackedData.X / 255f, PackedData.Y / 255f);
-		Size = new Vector2<float>(PackedData.Z / 255f, PackedData.W / 255f);
+		if (!reader.Read(out Vector4b data, endian))
+		{
+			return false;
+		}
 
-		Color.Deserialize(reader, endian);
+		block.UV = new Vector2f(data.X / 255f, data.Y / 255f);
+		block.Size = new Vector2f(data.Z / 255f, data.W / 255f);
+
+		if (!reader.Read(out block.Color, endian))
+		{
+			return false;
+		}
+
+		return true;
+	}
+}
+
+public static partial class BinaryReaderExtensions
+{
+	public static bool Read(this BinaryReader reader, out Halo block, Endian endian = default)
+	{
+		return Halo.Read(reader, out block, endian);
 	}
 }

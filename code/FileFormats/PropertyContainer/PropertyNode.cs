@@ -9,7 +9,8 @@ public enum NodeType
 	Variant,
 }
 
-public class PropertyNode<KeyType> where KeyType : struct, IConvertible
+public class PropertyNode<KeyType>
+	where KeyType : unmanaged, IComparable
 {
 	protected NodeType Type = NodeType.Invalid;
 	protected object Value;

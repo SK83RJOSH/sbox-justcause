@@ -4,25 +4,25 @@ using JustCause.FileFormats.Utilities;
 using System.Collections.Generic;
 using System.IO;
 
-public partial class SmallArchive : IBinaryReader<SmallArchive>
+public partial class SmallArchive
 {
-	public partial class File : IBinaryReader<File>
+	public partial class File
 	{
-		public static bool Read(BinaryReader reader, out File file, Endian endian = Endian.Little)
+		public static bool Read(BinaryReader reader, out File file, Endian endian = default)
 		{
 			file = default;
 
-			if (reader.Read(out string name, endian) < sizeof(uint) + 1)
+			if (!reader.Read(out string name, endian))
 			{
 				return false;
 			}
 
-			if (reader.Read(out uint offset, endian) < sizeof(uint))
+			if (!reader.Read(out uint offset, endian))
 			{
 				return false;
 			}
 
-			if (reader.Read(out uint size, endian) < sizeof(uint))
+			if (!reader.Read(out uint size, endian))
 			{
 				return false;
 			}
@@ -32,11 +32,11 @@ public partial class SmallArchive : IBinaryReader<SmallArchive>
 		}
 	}
 
-	public static bool Read(BinaryReader reader, out SmallArchive archive, Endian endian = Endian.Little)
+	public static bool Read(BinaryReader reader, out SmallArchive archive, Endian endian = default)
 	{
 		archive = default;
 
-		if (reader.Read(out uint magic_length, Endian.Little) < sizeof(uint))
+		if (!reader.Read(out uint magic_length, Endian.Little))
 		{
 			return false;
 		}
@@ -50,13 +50,13 @@ public partial class SmallArchive : IBinaryReader<SmallArchive>
 		endian = magic_length == 4 ? Endian.Little : Endian.Big;
 
 		// invalid SARC magic
-		if (reader.Read(out string magic, 4) < 4 || magic != "SARC")
+		if (!reader.Read(out string magic, 4) || magic != "SARC")
 		{
 			return false;
 		}
 
 		// unsupported SARC version
-		if (reader.Read(out uint version, endian) < sizeof(uint) || version < 1 || version > 2)
+		if (!reader.Read(out uint version, endian) || version < 1 || version > 2)
 		{
 			return false;
 		}
@@ -72,7 +72,7 @@ public partial class SmallArchive : IBinaryReader<SmallArchive>
 				return false;
 			}
 
-			files.Add(file.Name.HashJenkins(), file);
+			files[file.Name.HashJenkins()] = file;
 		}
 
 		reader.BaseStream.Seek(0, SeekOrigin.Begin);

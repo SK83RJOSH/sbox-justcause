@@ -2,7 +2,6 @@ namespace JustCause.FileFormats.RenderBlockModel.DataTypes;
 
 using JustCause.FileFormats.Utilities;
 using System.IO;
-using System.Text;
 
 public enum PrimitiveType : int
 {
@@ -17,7 +16,7 @@ public enum PrimitiveType : int
 	IndexedPointSprite
 };
 
-public struct Material : IBinaryFormat
+public struct Material
 {
 	public string Texture0;
 	public string Texture1;
@@ -29,16 +28,63 @@ public struct Material : IBinaryFormat
 	public string Texture7;
 	public PrimitiveType PrimitiveType;
 
-	public void Deserialize(BinaryReader reader, Endian endian)
+	public static bool Read(BinaryReader reader, out Material material, Endian endian = default)
 	{
-		Texture0 = reader.ReadString(Encoding.ASCII, endian);
-		Texture1 = reader.ReadString(Encoding.ASCII, endian);
-		Texture2 = reader.ReadString(Encoding.ASCII, endian);
-		Texture3 = reader.ReadString(Encoding.ASCII, endian);
-		Texture4 = reader.ReadString(Encoding.ASCII, endian);
-		Texture5 = reader.ReadString(Encoding.ASCII, endian);
-		Texture6 = reader.ReadString(Encoding.ASCII, endian);
-		Texture7 = reader.ReadString(Encoding.ASCII, endian);
-		PrimitiveType = (PrimitiveType)reader.ReadInt32(endian);
+		material = default;
+
+		if (!reader.Read(out material.Texture0, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out material.Texture1, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out material.Texture2, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out material.Texture3, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out material.Texture4, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out material.Texture5, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out material.Texture6, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out material.Texture7, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out material.PrimitiveType, endian))
+		{
+			return false;
+		}
+
+		return true;
+	}
+}
+
+public static partial class BinaryReaderExtensions
+{
+	public static bool Read(this BinaryReader reader, out Material material, Endian endian = default)
+	{
+		return Material.Read(reader, out material, endian);
 	}
 }

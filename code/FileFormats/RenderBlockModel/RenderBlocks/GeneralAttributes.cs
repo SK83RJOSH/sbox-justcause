@@ -3,6 +3,7 @@ namespace JustCause.FileFormats.RenderBlockModel.RenderBlocks;
 using JustCause.FileFormats.RenderBlockModel.DataTypes;
 using JustCause.FileFormats.Utilities;
 using System.IO;
+using Vector4f = DataTypes.Vector4<float>;
 
 [System.Flags]
 public enum GeneralFlags : uint
@@ -23,20 +24,56 @@ public enum GeneralFlags : uint
 
 public struct GeneralAttributes
 {
-	public Vector4<float> ChannelMask;
-	public Vector4<float> ChannelAmbientOcclusionMask;
+	public Vector4f ChannelMask;
+	public Vector4f ChannelAmbientOcclusionMask;
 	public float DepthBias;
 	public float Specularity;
 	public VertexInfo VertexInfo;
 	public GeneralFlags Flags;
 
-	public void Deserialize(BinaryReader reader, Endian endian, byte Version)
+	public static bool Read(BinaryReader reader, out GeneralAttributes attributes, byte version, Endian endian = default)
 	{
-		ChannelMask.Deserialize(reader, endian);
-		ChannelAmbientOcclusionMask.Deserialize(reader, endian);
-		DepthBias = reader.ReadSingle(endian);
-		Specularity = reader.ReadSingle(endian);
-		VertexInfo.Deserialize(reader, endian, Version < 3);
-		Flags = (GeneralFlags)reader.ReadUInt32(endian);
+		attributes = default;
+
+		if (!reader.Read(out attributes.ChannelMask, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out attributes.ChannelAmbientOcclusionMask, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out attributes.DepthBias, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out attributes.Specularity, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out attributes.VertexInfo, version < 3, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out attributes.Flags, endian))
+		{
+			return false;
+		}
+
+		return true;
 	}
 }
+
+public static partial class BinaryReaderExtensions
+{
+	public static bool Read(this BinaryReader reader, out GeneralAttributes attributes, byte version, Endian endian = default)
+	{
+		return GeneralAttributes.Read(reader, out attributes, version, endian);
+	}
+}
+

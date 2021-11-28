@@ -26,31 +26,58 @@ public struct LambertAttributes
 	public byte TextureChannel;
 	public byte AmbientOcclusionChannel;
 
-	public void Deserialize(BinaryReader reader, Endian endian, byte Version)
+	public static bool Read(BinaryReader reader, out LambertAttributes attributes, byte version, Endian endian)
 	{
-		if (Version == 4)
+		attributes = default;
+
+		if (version == 4 && !reader.Read(out attributes.VertexInfo, false, endian))
 		{
-			VertexInfo.Deserialize(reader, endian);
+			return false;
 		}
 
-		Flags = (LambertFlags)reader.ReadUInt32(endian);
-		DepthBias = reader.ReadSingle(endian);
-
-		if (Version == 3)
+		if (!reader.Read(out attributes.Flags, endian))
 		{
-			VertexInfo.Deserialize(reader, endian);
+			return false;
 		}
 
-		if (Version == 0)
+		if (version == 0)
 		{
-			Flags &= LambertFlags.UseDynamicLights;
+			attributes.Flags &= LambertFlags.UseDynamicLights;
 		}
 
-		if (Version == 4)
+		if (!reader.Read(out attributes.DepthBias, endian))
 		{
-			TextureChannel = reader.ReadByte();
-			AmbientOcclusionChannel = reader.ReadByte();
-			reader.ReadBytes(2); // skip two bytes because this definitely disaligns us
+			return false;
 		}
+
+		if (version == 3 && !reader.Read(out attributes.VertexInfo, false, endian))
+		{
+			return false;
+		}
+
+		if (version == 4)
+		{
+			if (!reader.Read(out attributes.TextureChannel, endian))
+			{
+				return false;
+			}
+
+			if (!reader.Read(out attributes.AmbientOcclusionChannel, endian))
+			{
+				return false;
+			}
+
+			reader.Skip(2);
+		}
+
+		return true;
+	}
+}
+
+public static partial class BinaryReaderExtensions
+{
+	public static bool Read(this BinaryReader reader, out LambertAttributes attributes, byte version, Endian endian = default)
+	{
+		return LambertAttributes.Read(reader, out attributes, version, endian);
 	}
 }

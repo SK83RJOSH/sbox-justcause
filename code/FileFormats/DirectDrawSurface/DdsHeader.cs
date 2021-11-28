@@ -45,7 +45,7 @@ public enum DdsPixelFormatFlags : uint
 	Luminance = 0x20000
 }
 
-public struct DdsPixelFormat : IBinaryFormat
+public struct DdsPixelFormat
 {
 	public uint Size;
 	public DdsPixelFormatFlags PixelFormatFlags;
@@ -56,29 +56,60 @@ public struct DdsPixelFormat : IBinaryFormat
 	public uint BBitMask;
 	public uint ABitMask;
 
-	public void Deserialize(BinaryReader reader, Endian endian)
+	public static bool Read(BinaryReader reader, out DdsPixelFormat format, Endian endian = default)
 	{
-		Size = reader.ReadUInt32(endian);
+		format = default;
 
-		if (Size != 32)
+		if (!reader.Read(out format.Size, endian) || format.Size != 32)
 		{
-			throw new Exception($"unexpected DDS pixel size, should be 32 not: ${Size}");
+			// unexpected DDS pixel size, should be 32
+			return false;
 		}
 
-		PixelFormatFlags = (DdsPixelFormatFlags)reader.ReadUInt32(endian);
-		FourCC = (DdsCompressionAlgorithm)reader.ReadUInt32(endian);
-		RGBBitCount = reader.ReadUInt32(endian);
-		RBitMask = reader.ReadUInt32(endian);
-		GBitMask = reader.ReadUInt32(endian);
-		BBitMask = reader.ReadUInt32(endian);
-		ABitMask = reader.ReadUInt32(endian);
+		if (!reader.Read(out format.PixelFormatFlags, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out format.FourCC, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out format.RGBBitCount, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out format.RBitMask, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out format.GBitMask, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out format.BBitMask, endian))
+		{
+			return false;
+
+		}
+
+		if (!reader.Read(out format.ABitMask, endian))
+		{
+			return false;
+		}
+
+		return true;
 	}
 }
 
-public class DdsHeader : IBinaryFormat
+public class DdsHeader
 {
 	public const int HEADER_SIZE = 124;
-	public const uint DDS_MAGIC = 542327876;
+	public const string DDS_MAGIC = "DDS ";
 
 	public uint Size;
 	public DdsFlags Flags;
@@ -95,40 +126,87 @@ public class DdsHeader : IBinaryFormat
 	public uint Caps4;
 	public uint Reserved2;
 
-	public DdsHeader(BinaryReader reader)
+	public static bool Read(BinaryReader reader, out DdsHeader header, Endian endian = default)
 	{
-		Deserialize(reader, Endian.Little);
-	}
+		header = new();
 
-	public void Deserialize(BinaryReader reader, Endian endian)
-	{
-		uint magic = reader.ReadUInt32(endian);
-
-		if (magic != DDS_MAGIC)
+		if (!reader.Read(out string magic, 4) || magic != DDS_MAGIC)
 		{
-			throw new Exception("invalid DDS magic");
+			// invalid DDS magic
+			return false;
 		}
 
-		Size = reader.ReadUInt32(endian);
-
-		if (Size != HEADER_SIZE)
+		if (!reader.Read(out header.Size) || header.Size != HEADER_SIZE)
 		{
-			throw new Exception("invalid DDS header");
+			// invalid DDS header
+			return false;
 		}
 
-		Flags = (DdsFlags)reader.ReadUInt32(endian);
-		Height = reader.ReadUInt32(endian);
-		Width = reader.ReadUInt32(endian);
-		PitchOrLinearSize = reader.ReadUInt32(endian);
-		Depth = reader.ReadUInt32(endian);
-		MipMapCount = reader.ReadUInt32(endian);
-		Reserved1 = new uint[11];
-		reader.ReadArray(Reserved1, endian);
-		PixelFormat.Deserialize(reader, endian);
-		Caps = reader.ReadUInt32(endian);
-		Caps2 = reader.ReadUInt32(endian);
-		Caps3 = reader.ReadUInt32(endian);
-		Caps4 = reader.ReadUInt32(endian);
-		Reserved2 = reader.ReadUInt32(endian);
+		if (!reader.Read(out header.Flags, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out header.Height, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out header.Width, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out header.PitchOrLinearSize, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out header.Depth, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out header.MipMapCount, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out header.Reserved1, 11, endian))
+		{
+			return false;
+		}
+
+		if (!DdsPixelFormat.Read(reader, out header.PixelFormat, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out header.Caps, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out header.Caps2, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out header.Caps3, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out header.Caps4, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out header.Reserved2, endian))
+		{
+			return false;
+		}
+
+		return true;
 	}
 }

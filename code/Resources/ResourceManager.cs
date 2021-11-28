@@ -88,19 +88,18 @@ public static class ResourceManager
 			return true;
 		}
 
-		RenderBlockModelFile rbm_file = null;
+		RenderBlockModel rbm = null;
 
 		foreach (SmallArchive archive in LoadedArchives.Values)
 		{
 			if (archive.TryGetFile(path, out MemoryStream rbm_stream))
 			{
-				rbm_file = new RenderBlockModelFile();
-				rbm_file.Deserialize(new BinaryReader(rbm_stream));
+				RenderBlockModel.Read(new BinaryReader(rbm_stream), out rbm);
 				break;
 			}
 		}
 
-		if (rbm_file == null)
+		if (rbm == null)
 		{
 			model = default;
 			return false;
@@ -108,7 +107,7 @@ public static class ResourceManager
 
 		List<Mesh> meshes = new List<Mesh>();
 
-		foreach (IRenderBlock block in rbm_file.Blocks)
+		foreach (IRenderBlock block in rbm.Blocks)
 		{
 			Mesh mesh = new();
 			Material material = null;
@@ -123,14 +122,14 @@ public static class ResourceManager
 				material = CreateMaterial("materials/general.vmat", ref car_paint.Material);
 				primitive_type = GetPrimitiveType(ref car_paint.Material);
 
-				foreach (var car_paint_vertex in car_paint.Vertices)
+				foreach (var block_vertex in car_paint.Vertices)
 				{
 					Vertex vertex = default;
-					vertex.Position = car_paint_vertex.Position.AsSourceCoord();
-					vertex.Normal = car_paint_vertex.Normal.AsSourceNorm();
-					vertex.Tangent = new Vector4(car_paint_vertex.Tangent.AsSourceNorm(), MathF.Sign(car_paint_vertex.Tangent.Packed));
+					vertex.Position = block_vertex.Position.AsSourceCoord();
+					vertex.Normal = block_vertex.Normal.Value.AsSourceCoord();
+					vertex.Tangent = new Vector4(block_vertex.Tangent.Value.AsSourceCoord(), block_vertex.Tangent.Sign);
 					vertex.Color = Color.White;
-					vertex.TexCoord0 = new Vector2(car_paint_vertex.UVL.X, car_paint_vertex.UVL.Y);
+					vertex.TexCoord0 = block_vertex.UV.AsSource();
 					vertex_buffer.Add(vertex);
 					vertex_count++;
 				}
@@ -145,14 +144,14 @@ public static class ResourceManager
 				material = CreateMaterial("materials/general.vmat", ref car_paint_simple.Material);
 				primitive_type = GetPrimitiveType(ref car_paint_simple.Material);
 
-				foreach (var car_paint_simple_vertex in car_paint_simple.Vertices)
+				foreach (var block_vertex in car_paint_simple.Vertices)
 				{
 					Vertex vertex = default;
-					vertex.Position = car_paint_simple_vertex.Position.AsSourceCoord();
-					vertex.Normal = car_paint_simple_vertex.Normal.AsSourceCoord();
-					vertex.Tangent = new Vector4(car_paint_simple_vertex.Tangent.AsSourceCoord(), 1f);
+					vertex.Position = block_vertex.Position.AsSourceCoord();
+					vertex.Normal = block_vertex.Normal.Value.AsSourceCoord();
+					vertex.Tangent = new Vector4(block_vertex.Tangent.Value.AsSourceCoord(), block_vertex.Tangent.Sign);
 					vertex.Color = Color.White;
-					vertex.TexCoord0 = car_paint_simple_vertex.UV.AsSource();
+					vertex.TexCoord0 = block_vertex.UV.AsSource();
 					vertex_buffer.Add(vertex);
 					vertex_count++;
 				}
@@ -167,14 +166,14 @@ public static class ResourceManager
 				material = CreateMaterial("materials/general.vmat", ref deformable_window.Material);
 				primitive_type = GetPrimitiveType(ref deformable_window.Material);
 
-				foreach (var deformable_vertex in deformable_window.Vertices)
+				foreach (var block_vertex in deformable_window.Vertices)
 				{
 					Vertex vertex = default;
-					vertex.Position = deformable_vertex.Position.AsSourceCoord();
-					vertex.Normal = deformable_vertex.Normal.AsSourceCoord();
-					vertex.Tangent = new Vector4(deformable_vertex.Tangent.AsSourceCoord(), 1f);
+					vertex.Position = block_vertex.Position.AsSourceCoord();
+					vertex.Normal = block_vertex.Normal.Value.AsSourceCoord();
+					vertex.Tangent = new Vector4(block_vertex.Tangent.Value.AsSourceCoord(), 1f);
 					vertex.Color = Color.Black * 0.5f;
-					vertex.TexCoord0 = deformable_vertex.UV.AsSource();
+					vertex.TexCoord0 = block_vertex.UV.AsSource();
 					vertex_buffer.Add(vertex);
 					vertex_count++;
 				}
@@ -189,15 +188,15 @@ public static class ResourceManager
 				material = CreateMaterial("materials/general.vmat", ref general.Material);
 				primitive_type = GetPrimitiveType(ref general.Material);
 
-				foreach (var general_vertex in general.Vertices)
+				foreach (var block_vertex in general.Vertices)
 				{
 					Vertex vertex = default;
-					vertex.Position = general_vertex.Position.AsSourceCoord() * general.Attributes.VertexInfo.Scale;
-					vertex.Normal = general_vertex.Normal.AsSourceCoord();
-					vertex.Tangent = new Vector4(general_vertex.Tangent.AsSourceCoord(), 1f);
-					vertex.Color = general_vertex.Color.AsSource();
-					vertex.TexCoord0 = general_vertex.UVs[0].AsSource();
-					vertex.TexCoord1 = general_vertex.UVs[1].AsSource();
+					vertex.Position = block_vertex.Position.AsSourceCoord() * general.Attributes.VertexInfo.Scale;
+					vertex.Normal = block_vertex.Normal.Value.AsSourceCoord();
+					vertex.Tangent = new Vector4(block_vertex.Tangent.Value.AsSourceCoord(), 1f);
+					vertex.Color = (Color)block_vertex.Color.Value.AsSource();
+					vertex.TexCoord0 = block_vertex.UVs[0].AsSource();
+					vertex.TexCoord1 = block_vertex.UVs[1].AsSource();
 					vertex_buffer.Add(vertex);
 					vertex_count++;
 				}
@@ -212,15 +211,15 @@ public static class ResourceManager
 				material = CreateMaterial("materials/general.vmat", ref lambert.Material);
 				primitive_type = GetPrimitiveType(ref lambert.Material);
 
-				foreach (var general_vertex in lambert.Vertices)
+				foreach (var block_vertex in lambert.Vertices)
 				{
 					Vertex vertex = default;
-					vertex.Position = general_vertex.Position.AsSourceCoord() * lambert.Attributes.VertexInfo.Scale;
-					vertex.Normal = general_vertex.Normal.AsSourceCoord();
-					vertex.Tangent = new Vector4(general_vertex.Tangent.AsSourceCoord(), 1f);
-					vertex.Color = general_vertex.Color.AsSource();
-					vertex.TexCoord0 = general_vertex.UVs[0].AsSource();
-					vertex.TexCoord1 = general_vertex.UVs[1].AsSource();
+					vertex.Position = block_vertex.Position.AsSourceCoord() * lambert.Attributes.VertexInfo.Scale;
+					vertex.Normal = block_vertex.Normal.Value.AsSourceCoord();
+					vertex.Tangent = new Vector4(block_vertex.Tangent.Value.AsSourceCoord(), block_vertex.Tangent.Sign);
+					vertex.Color = (Color)block_vertex.Color.Value.AsSource();
+					vertex.TexCoord0 = block_vertex.UVs[0].AsSource();
+					vertex.TexCoord1 = block_vertex.UVs[1].AsSource();
 					vertex_buffer.Add(vertex);
 					vertex_count++;
 				}
@@ -235,7 +234,7 @@ public static class ResourceManager
 			{
 				mesh.Material = material;
 				mesh.PrimitiveType = primitive_type;
-				mesh.Bounds = new BBox(rbm_file.Min.AsSourceCoord(), rbm_file.Max.AsSourceCoord());
+				mesh.Bounds = new BBox(rbm.Min.AsSourceCoord(), rbm.Max.AsSourceCoord());
 				mesh.CreateBuffers(vertex_buffer, false);
 				meshes.Add(mesh);
 			}
@@ -279,7 +278,7 @@ public static class ResourceManager
 
 	public static bool LoadTexture(string path, out Texture texture)
 	{
-		Dds dds_file = null;
+		Dds dds = null;
 
 		if (LoadedTextures.ContainsKey(path))
 		{
@@ -291,23 +290,23 @@ public static class ResourceManager
 		{
 			if (archive.TryGetFile(path, out MemoryStream texture_stream))
 			{
-				dds_file = Dds.Create(texture_stream);
+				Dds.Read(texture_stream, out dds);
 				break;
 			}
 		}
 
-		if (dds_file == null)
+		if (dds == null)
 		{
 			texture = default;
 			return false;
 		}
 
-		var mip_level = dds_file.MipMaps[0];
+		var mip_level = dds.MipMaps[0];
 		byte[] data = new byte[mip_level.DataLen];
 
 		for (int i = 0; i < mip_level.DataLen; i++)
 		{
-			data[i] = dds_file.Data[mip_level.DataOffset + i];
+			data[i] = dds.Data[mip_level.DataOffset + i];
 		}
 
 		texture = Texture.Create(mip_level.Width, mip_level.Height, ImageFormat.RGBA8888).WithData(data).Finish();

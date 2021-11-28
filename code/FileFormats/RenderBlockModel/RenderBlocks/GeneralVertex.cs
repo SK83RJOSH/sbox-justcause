@@ -3,40 +3,115 @@ namespace JustCause.FileFormats.RenderBlockModel.RenderBlocks;
 using JustCause.FileFormats.RenderBlockModel.DataTypes;
 using JustCause.FileFormats.Utilities;
 using System.IO;
+using Vector2f = DataTypes.Vector2<float>;
+using Vector3f = DataTypes.Vector3<float>;
+using PackedNormal = DataTypes.PackedVector3<DataTypes.NormalPackingModel>;
+using PackedColor = DataTypes.PackedVector3<DataTypes.ColorPackingModelRGB>;
 
 public struct GeneralVertex
 {
-	public Vector3<float> Position;
-	public Vector2<float>[] UVs = new Vector2<float>[2];
-	public PackedVector3 Normal = new(Packing.Normal);
-	public PackedVector3 Tangent = new(Packing.Normal);
+	public Vector3f Position;
+	public Vector2f[] UVs;
+	public PackedNormal Normal;
+	public PackedNormal Tangent;
 	public PackedColor Color;
 
-	public void Deserialize(BinaryReader reader, Endian endian, VertexFormat Format)
+	public static bool Read(BinaryReader reader, out GeneralVertex vertex, VertexFormat format, Endian endian = default)
 	{
-		if (Format == VertexFormat.Float32)
+		vertex = default;
+
+		if (format == VertexFormat.Float32)
 		{
-			Position.Deserialize(reader, endian);
-			reader.ReadBinaryFormatArray(UVs, endian);
-			Normal.Deserialize(reader, endian);
-			Tangent.Deserialize(reader, endian);
-			Color.Deserialize(reader, endian);
+			if (!reader.Read(out vertex.Position, endian))
+			{
+				return false;
+			}
+
+			if (!reader.Read(out vertex.UVs, 2, endian))
+			{
+				return false;
+			}
+
+			if (!reader.Read(out vertex.Normal, endian))
+			{
+				return false;
+			}
+
+			if (!reader.Read(out vertex.Tangent, endian))
+			{
+				return false;
+			}
+
+			if (!reader.Read(out vertex.Color, endian))
+			{
+				return false;
+			}
 		}
 		else
 		{
-			Vector2<short>[] PackedUVs = new Vector2<short>[2];
-			reader.ReadBinaryFormatArray(PackedUVs, endian);
-			UVs[0] = new Vector2<float>(PackedUVs[0].X / 32767f, PackedUVs[0].Y / 32767f);
-			UVs[1] = new Vector2<float>(PackedUVs[1].X / 32767f, PackedUVs[1].Y / 32767f);
+			if (!reader.Read(out Vector2<short>[] uvs, 2, endian))
+			{
+				return false;
+			}
 
-			Normal.Deserialize(reader, endian);
-			Tangent.Deserialize(reader, endian);
-			Color.Deserialize(reader, endian);
+			vertex.UVs = new Vector2f[] {
+				new(uvs[0].X / 32767f, uvs[0].Y / 32767f),
+				new(uvs[1].X / 32767f, uvs[1].Y / 32767f),
+			};
 
-			Vector3<short> PackedPosition = default;
-			PackedPosition.Deserialize(reader, endian);
-			Position = new Vector3<float>(PackedPosition.X / 32767f, PackedPosition.Y / 32767f, PackedPosition.Z / 32767f);
-			reader.ReadBytes(2);
+			if (!reader.Read(out vertex.Normal, endian))
+			{
+				return false;
+			}
+
+			if (!reader.Read(out vertex.Tangent, endian))
+			{
+				return false;
+			}
+
+			if (!reader.Read(out vertex.Color, endian))
+			{
+				return false;
+			}
+
+			if (!reader.Read(out Vector3<short> position, endian))
+			{
+				return false;
+			}
+
+			vertex.Position = new Vector3f(position.X / 32767f, position.Y / 32767f, position.Z / 32767f);
+			reader.Skip(2);
 		}
+
+		return true;
+	}
+}
+
+public static partial class BinaryReaderExtensions
+{
+	public static bool Read(this BinaryReader reader, out GeneralVertex vertex, VertexFormat format, Endian endian = default)
+	{
+		return GeneralVertex.Read(reader, out vertex, format, endian);
+	}
+
+	public static bool Read(this BinaryReader reader, out GeneralVertex[] vertices, VertexFormat format, Endian endian = default)
+	{
+		if (!reader.Read(out int count, endian))
+		{
+			vertices = default;
+			return false;
+		}
+
+		vertices = new GeneralVertex[count];
+
+		for (int i = 0; i < count; ++i)
+		{
+			if (!reader.Read(out vertices[i], format, endian))
+			{
+				return false;
+			}
+		}
+
+		return true;
 	}
 }

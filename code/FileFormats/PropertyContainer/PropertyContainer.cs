@@ -8,7 +8,7 @@ public static class PropertyContainerExtensions
 {
 	public static IEnumerator<PropertyContainer<KeyType>>
 		GetEnumerator<KeyType>(this IEnumerator<PropertyContainer<KeyType>> enumerator)
-		where KeyType : struct, IConvertible => enumerator;
+		where KeyType : unmanaged, IComparable => enumerator;
 
 	public static IEnumerator<PropertyVariant>
 		GetEnumerator(this IEnumerator<PropertyVariant> enumerator)
@@ -16,14 +16,15 @@ public static class PropertyContainerExtensions
 
 	public static IEnumerator<(KeyType Key, PropertyContainer<KeyType> Value)>
 		GetEnumerator<KeyType>(this IEnumerator<(KeyType, PropertyContainer<KeyType>)> enumerator)
-		where KeyType : struct, IConvertible => enumerator;
+		where KeyType : unmanaged, IComparable => enumerator;
 
 	public static IEnumerator<(KeyType Key, PropertyVariant Value)>
 		GetEnumerator<KeyType>(this IEnumerator<(KeyType, PropertyVariant)> enumerator)
 		=> enumerator;
 }
 
-public partial class PropertyContainer<KeyType> where KeyType : struct, IConvertible
+public partial class PropertyContainer<KeyType>
+	where KeyType : unmanaged, IComparable
 {
 	protected Dictionary<KeyType, PropertyNode<KeyType>> KeyToNode = new();
 

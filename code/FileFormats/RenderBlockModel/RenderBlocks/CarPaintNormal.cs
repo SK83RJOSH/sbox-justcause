@@ -3,21 +3,81 @@
 using JustCause.FileFormats.RenderBlockModel.DataTypes;
 using JustCause.FileFormats.Utilities;
 using System.IO;
+using PackedNormal = DataTypes.PackedVector3<DataTypes.NormalPackingModel>;
+using Vector2f = DataTypes.Vector2<float>;
 
-public struct CarPaintNormal : IBinaryFormat
+public struct CarPaintNormal
 {
-	public Vector3<float> UVL;
-	public PackedVector3 Normal = new(Packing.ZXY);
-	public PackedVector3 DeformedNormal = new(Packing.XZY);
-	public PackedVector3 Tangent = new(Packing.ZXY);
-	public PackedVector3 DeformedTangent = new(Packing.XZY);
+	public Vector2f UV;
+	public float Light;
+	public PackedNormal Normal;
+	public PackedNormal DeformedNormal;
+	public PackedNormal Tangent;
+	public PackedNormal DeformedTangent;
 
-	public void Deserialize(BinaryReader reader, Endian endian)
+	public static bool Read(BinaryReader reader, out CarPaintNormal normal, Endian endian = default)
 	{
-		UVL.Deserialize(reader, endian);
-		Normal.Deserialize(reader, endian);
-		DeformedNormal.Deserialize(reader, endian);
-		Tangent.Deserialize(reader, endian, true);
-		DeformedTangent.Deserialize(reader, endian, true);
+		normal = new();
+
+		if (!reader.Read(out normal.UV, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out normal.Light, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out normal.Normal, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out normal.DeformedNormal, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out normal.Tangent, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out normal.DeformedTangent, endian))
+		{
+			return false;
+		}
+
+		return true;
+	}
+}
+
+public static partial class BinaryReaderExtensions
+{
+	public static bool Read(this BinaryReader reader, out CarPaintNormal normal, Endian endian = default)
+	{
+		return CarPaintNormal.Read(reader, out normal, endian);
+	}
+
+	public static bool Read(this BinaryReader reader, out CarPaintNormal[] normals, Endian endian = default)
+	{
+		if (!reader.Read(out int count, endian))
+		{
+			normals = default;
+			return false;
+		}
+
+		normals = new CarPaintNormal[count];
+
+		for (int i = 0; i < count; ++i)
+		{
+			if (!reader.Read(out normals[i], endian))
+			{
+				return false;
+			}
+		}
+
+		return true;
 	}
 }

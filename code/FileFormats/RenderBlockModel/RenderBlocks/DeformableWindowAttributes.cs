@@ -14,8 +14,17 @@ public struct DeformableWindowAttributes
 {
 	public DeformableWindowFlags Flags;
 
-	public void Deserialize(BinaryReader reader, Endian endian)
+	public static bool Read(BinaryReader reader, out DeformableWindowAttributes attributes, Endian endian)
 	{
-		Flags = (DeformableWindowFlags)reader.ReadUInt32(endian);
+		attributes = default;
+		return reader.Read(out attributes.Flags, endian);
+	}
+}
+
+public static partial class BinaryReaderExtensions
+{
+	public static bool Read(this BinaryReader reader, out DeformableWindowAttributes attributes, Endian endian = default)
+	{
+		return DeformableWindowAttributes.Read(reader, out attributes, endian);
 	}
 }

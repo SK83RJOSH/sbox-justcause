@@ -2,71 +2,103 @@ namespace JustCause.FileFormats.RenderBlockModel.RenderBlocks;
 
 using JustCause.FileFormats.RenderBlockModel.DataTypes;
 using JustCause.FileFormats.Utilities;
-using System;
-using System.Collections.Generic;
 using System.IO;
 
-[Sandbox.Library]
-public struct CarPaint : IRenderBlock
+public class CarPaint : IRenderBlock
 {
-	public byte Version;
 	public CarPaintAttributes Attributes;
 	public Material Material;
-	public List<CarPaintCombinedVertex> Vertices = new();
-	public List<short> Indices = new();
+	public CarPaintCombinedVertex[] Vertices;
+	public short[] Indices;
 	public DeformTable DeformTable;
 
-	public void Deserialize(BinaryReader reader, Endian endian)
+	public static bool Read(BinaryReader reader, out CarPaint block, Endian endian = default)
 	{
-		Version = reader.ReadByte();
+		block = new();
 
-		if (Version < 3 || Version > 4) // Version < 3 used combined normal/vertice data
+		if (!reader.Read(out byte version, endian))
 		{
-			throw new FormatException("unhandled CarPaint version");
+			return false;
 		}
 
-		Attributes.Deserialize(reader, endian);
-
-		if (Version >= 4)
+		if (version < 3 || version > 4) // TODO: V3 used combined normal/vertice data
 		{
-			DeformTable.Deserialize(reader, endian);
+			// unhandled CarPaint version
+			return false;
 		}
 
-		Material.Deserialize(reader, endian);
-
-		if (Version >= 3)
+		if (!reader.Read(out block.Attributes, endian))
 		{
-			List<CarPaintVertex> vertices = new();
-			reader.ReadBinaryFormatList(vertices, endian);
-			List<CarPaintNormal> normals = new();
-			reader.ReadBinaryFormatList(normals, endian);
+			return false;
+		}
 
-			if (vertices.Count != normals.Count)
+		if (version >= 4)
+		{
+			if (!reader.Read(out block.DeformTable, endian))
 			{
-				throw new FormatException("CarPaint vertex count did not equal normal count!");
-			}
-
-			Vertices.Capacity = vertices.Count;
-
-			for (int i = 0; i < vertices.Count; ++i)
-			{
-				CarPaintCombinedVertex vertex = default;
-				vertex.Position = vertices[i].Position;
-				vertex.DeformWeights = vertices[i].DeformWeights;
-				vertex.UVL = normals[i].UVL;
-				vertex.Normal = normals[i].Normal;
-				vertex.DeformedNormal = normals[i].DeformedNormal;
-				vertex.Tangent = normals[i].Tangent;
-				vertex.DeformedTangent = normals[i].DeformedTangent;
-				Vertices.Add(vertex);
+				return false;
 			}
 		}
 
-		reader.ReadList(Indices, endian);
-
-		if (Version <= 3)
+		if (!reader.Read(out block.Material, endian))
 		{
-			DeformTable.Deserialize(reader, endian);
+			return false;
 		}
+
+		if (version >= 3)
+		{
+			if (!reader.Read(out CarPaintVertex[] vertices, endian))
+			{
+				return false;
+			}
+
+			if (!reader.Read(out CarPaintNormal[] normals, endian))
+			{
+				return false;
+			}
+
+			if (vertices.Length != normals.Length)
+			{
+				// CarPaint vertex count did not equal normal count!
+				return false;
+			}
+
+			block.Vertices = new CarPaintCombinedVertex[vertices.Length];
+
+			for (int i = 0; i < vertices.Length; ++i)
+			{
+				block.Vertices[i].Position = vertices[i].Position;
+				block.Vertices[i].DeformWeights = vertices[i].DeformWeights;
+				block.Vertices[i].UV = normals[i].UV;
+				block.Vertices[i].Light = normals[i].Light;
+				block.Vertices[i].Normal = normals[i].Normal;
+				block.Vertices[i].DeformedNormal = normals[i].DeformedNormal;
+				block.Vertices[i].Tangent = normals[i].Tangent;
+				block.Vertices[i].DeformedTangent = normals[i].DeformedTangent;
+			}
+		}
+
+		if (!reader.Read(out block.Indices, endian))
+		{
+			return false;
+		}
+
+		if (version <= 3)
+		{
+			if (!reader.Read(out block.DeformTable, endian))
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+}
+
+public static partial class BinaryReaderExtensions
+{
+	public static bool Read(this BinaryReader reader, out CarPaint block, Endian endian = default)
+	{
+		return CarPaint.Read(reader, out block, endian);
 	}
 }

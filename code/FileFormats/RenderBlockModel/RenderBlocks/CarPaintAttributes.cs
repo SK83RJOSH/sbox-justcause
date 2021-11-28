@@ -19,7 +19,7 @@ public enum CarPaintFlags : uint
 	FlatNormal = 1 << 10
 }
 
-public struct CarPaintAttributes : IBinaryFormat
+public struct CarPaintAttributes
 {
 	public Vector3<float>[] TwoToneColors;
 	public float Specularity;
@@ -28,14 +28,48 @@ public struct CarPaintAttributes : IBinaryFormat
 	public Vector4<float> Noise;
 	public CarPaintFlags Flags;
 
-	public void Deserialize(BinaryReader reader, Endian endian)
+	public static bool Read(BinaryReader reader, out CarPaintAttributes attributes, Endian endian = default)
 	{
-		TwoToneColors = new Vector3<float>[2];
-		reader.ReadBinaryFormatArray(TwoToneColors, endian);
-		Specularity = reader.ReadSingle(endian);
-		DepthBias = reader.ReadSingle(endian);
-		Reflectivity = reader.ReadSingle(endian);
-		Noise.Deserialize(reader, endian);
-		Flags = (CarPaintFlags)reader.ReadUInt32(endian);
+		attributes = default;
+
+		if (!reader.Read(out attributes.TwoToneColors, 2, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out attributes.Specularity, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out attributes.DepthBias, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out attributes.Reflectivity, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out attributes.Noise, endian))
+		{
+			return false;
+		}
+
+		if (!reader.Read(out attributes.Flags, endian))
+		{
+			return false;
+		}
+
+		return true;
+	}
+}
+
+public static partial class BinaryReaderExtensions
+{
+	public static bool Read(this BinaryReader reader, out CarPaintAttributes attributes, Endian endian = default)
+	{
+		return CarPaintAttributes.Read(reader, out attributes, endian);
 	}
 }

@@ -1,7 +1,7 @@
 ﻿namespace JustCause.FileFormats.DirectDrawSurface;
 
 using JustCause.FileFormats.DirectDrawSurface.Formats;
-using Sandbox;
+using JustCause.FileFormats.Utilities;
 using System;
 using System.IO;
 
@@ -93,16 +93,21 @@ public abstract class Dds
 		Header = header;
 	}
 
-	public static Dds Create(MemoryStream stream)
+	public static bool Read(MemoryStream stream, out Dds dds, Endian endian = default)
 	{
 		BinaryReader reader = new BinaryReader(stream);
-		DdsHeader header = new DdsHeader(reader);
-		return Decode(reader, header);
+
+		if (!DdsHeader.Read(reader, out DdsHeader header, endian))
+		{
+			dds = null;
+			return false;
+		}
+		
+		return Decode(reader, out dds, header);
 	}
 
-	private static Dds Decode(BinaryReader reader, DdsHeader header)
+	private static bool Decode(BinaryReader reader, out Dds dds, DdsHeader header)
 	{
-		Dds dds;
 		switch (header.PixelFormat.FourCC)
 		{
 			case DdsCompressionAlgorithm.D3DFMT_DXT1:
@@ -114,13 +119,11 @@ public abstract class Dds
 			case DdsCompressionAlgorithm.D3DFMT_DXT5:
 				dds = new Dxt5Dds(header);
 				break;
-			//case DdsCompressionAlgorithm.None:
-			//dds = new UncompressedDds(header, reader);
-			//break;
 			default:
 				throw new ArgumentException($"DDS format {header.PixelFormat.FourCC} not supported.");
 		}
+
 		dds.Decode(reader);
-		return dds;
+		return true;
 	}
 }

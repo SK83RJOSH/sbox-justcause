@@ -1,7 +1,6 @@
 ﻿namespace JustCause.FileFormats.PropertyContainer;
 
 using JustCause.FileFormats.Utilities;
-using System;
 using System.Collections.Generic;
 using System.IO;
 
@@ -23,28 +22,32 @@ enum TagType : ushort
 	SubObject,
 }
 
-public partial class PropertyContainer<KeyType> where KeyType : struct, IConvertible
+public partial class PropertyContainer<KeyType>
 {
 	public Stack<PropertyContainer<KeyType>> Containers = new();
 
-	public static bool Read(BinaryReader reader, out PropertyContainer<KeyType> container, Endian endian = Endian.Little)
+	public static bool Read(BinaryReader reader, out PropertyContainer<KeyType> container, Endian endian = default)
 	{
-		if (reader.Read(out string magic, 4) == 4 && magic != "PCBB")
+		if (!reader.Read(out string magic, 4))
+		{
+			container = default;
+			return false;
+		}
+
+		if (magic == "PCBB")
 		{
 			return ReadBlocked(reader, out container, endian);
 		}
-		else
-		{
-			reader.BaseStream.Position -= 4;
-			return ReadContiguous(reader, out container, endian);
-		}
+
+		reader.BaseStream.Position -= 4;
+		return ReadContiguous(reader, out container, endian);
 	}
 
 	private static bool ReadContiguous(BinaryReader reader, out PropertyContainer<KeyType> container, Endian endian)
 	{
 		container = new();
 
-		while (!reader.IsEOS())
+		while (!reader.AtEnd())
 		{
 			if (!ReadSection(reader, container, endian))
 			{
@@ -66,19 +69,19 @@ public partial class PropertyContainer<KeyType> where KeyType : struct, IConvert
 
 	private static bool ReadSection(BinaryReader reader, PropertyContainer<KeyType> container, Endian endian)
 	{
-		if (reader.Read(out byte section_count, endian) == 0)
+		if (!reader.Read(out byte section_count, endian))
 		{
 			return false;
 		}
 
 		for (int i = 0; i < section_count; ++i)
 		{
-			if (reader.Read(out SectionType section_type, endian) == 0)
+			if (!reader.Read(out SectionType section_type, endian))
 			{
 				return false;
 			}
 
-			if (reader.Read(out ushort entry_count, endian) == 0)
+			if (!reader.Read(out ushort entry_count, endian))
 			{
 				return false;
 			}
@@ -117,7 +120,7 @@ public partial class PropertyContainer<KeyType> where KeyType : struct, IConvert
 	{
 		for (int i = 0; i < count; ++i)
 		{
-			if (reader.Read(out string key, endian) < sizeof(uint) + 1)
+			if (!reader.Read(out string key, endian))
 			{
 				return false;
 			}
@@ -135,7 +138,7 @@ public partial class PropertyContainer<KeyType> where KeyType : struct, IConvert
 	{
 		for (int i = 0; i < count; ++i)
 		{
-			if (reader.Read(out KeyType key, endian) == 0)
+			if (!reader.Read(out KeyType key, endian))
 			{
 				return false;
 			}
@@ -153,7 +156,7 @@ public partial class PropertyContainer<KeyType> where KeyType : struct, IConvert
 	{
 		for (int i = 0; i < count; ++i)
 		{
-			if (reader.Read(out string key, endian) == 0)
+			if (!reader.Read(out string key, endian))
 			{
 				return false;
 			}
@@ -171,7 +174,7 @@ public partial class PropertyContainer<KeyType> where KeyType : struct, IConvert
 	{
 		for (int i = 0; i < count; ++i)
 		{
-			if (reader.Read(out KeyType key, endian) == 0)
+			if (!reader.Read(out KeyType key, endian))
 			{
 				return false;
 			}
@@ -187,47 +190,127 @@ public partial class PropertyContainer<KeyType> where KeyType : struct, IConvert
 
 	private static bool ReadVariant(BinaryReader reader, out PropertyVariant variant, Endian endian)
 	{
-		if (reader.Read(out VariantType variant_type, endian) == 0)
+		variant = default;
+
+		if (!reader.Read(out VariantType variant_type, endian))
 		{
-			variant = default;
 			return false;
 		}
 
 		switch (variant_type)
 		{
 			case VariantType.Integer:
-				variant = new(reader.ReadInt32(endian));
+				{
+					if (!reader.Read(out int value, endian))
+					{
+						return false;
+					}
+
+					variant = new(value);
+				}
 				break;
 			case VariantType.Float:
-				variant = new(reader.ReadSingle(endian));
+				{
+					if (!reader.Read(out float value, endian))
+					{
+						return false;
+					}
+
+					variant = new(value);
+				}
 				break;
 			case VariantType.String:
-				variant = new(reader.ReadString(reader.Read<ushort>(endian)));
+				{
+					if (!reader.Read(out ushort length, endian))
+					{
+						return false;
+					}
+
+					if (!reader.Read(out string value, length))
+					{
+						return false;
+					}
+
+					variant = new(value);
+				}
 				break;
 			case VariantType.Vec2:
-				variant = new(new Vec2(reader.Read<float>(2, endian)));
+				{
+					if (!reader.Read(out float[] value, 2, endian))
+					{
+						return false;
+					}
+
+					variant = new(new Vec2(value));
+				}
 				break;
 			case VariantType.Vec3:
-				variant = new(new Vec3(reader.Read<float>(3, endian)));
+				{
+					if (!reader.Read(out float[] value, 3, endian))
+					{
+						return false;
+					}
+
+					variant = new(new Vec3(value));
+				}
 				break;
 			case VariantType.Vec4:
-				variant = new(new Vec4(reader.Read<float>(4, endian)));
+				{
+					if (!reader.Read(out float[] value, 4, endian))
+					{
+						return false;
+					}
+
+					variant = new(new Vec4(value));
+				}
 				break;
 			case VariantType.Mat3x3:
-				variant = new(new Mat3x3(reader.Read<float>(3 * 3, endian)));
+				{
+					if (!reader.Read(out float[] value, 3 * 3, endian))
+					{
+						return false;
+					}
+
+					variant = new(new Mat3x3(value));
+				}
 				break;
 			case VariantType.Mat3x4:
-				// TODO: Convert 3x4 to 4x4?
-				variant = new(new Mat3x4(reader.Read<float>(3 * 4, endian)));
+				{
+					if (!reader.Read(out float[] value, 3 * 4, endian))
+					{
+						return false;
+					}
+
+					// TODO: Convert 3x4 to 4x4?
+					variant = new(new Mat3x4(value));
+				}
 				break;
 			case VariantType.VecInt:
-				variant = new(reader.Read<int>(reader.Read<uint>(endian), endian));
+				{
+					if (!reader.Read(out int length, endian))
+					{
+						return false;
+					}
+
+					if (!reader.Read(out int[] value, length, endian))
+					{
+						return false;
+					}
+
+					variant = new(value);
+				}
 				break;
 			case VariantType.VecFloat:
-				variant = new(reader.Read<float>(reader.Read<uint>(endian), endian));
+				{
+					if (!reader.Read(out float[] value, endian))
+					{
+						return false;
+					}
+
+					variant = new(value);
+				}
 				break;
 			default:
-				variant = default;
 				return false;
 		}
 
