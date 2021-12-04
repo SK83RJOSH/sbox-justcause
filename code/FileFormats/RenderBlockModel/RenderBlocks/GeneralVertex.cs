@@ -80,7 +80,7 @@ public struct GeneralVertex
 			}
 
 			vertex.Position = new Vector3f(position.X / 32767f, position.Y / 32767f, position.Z / 32767f);
-			reader.Skip(2);
+			reader.Move(2);
 		}
 
 		return true;

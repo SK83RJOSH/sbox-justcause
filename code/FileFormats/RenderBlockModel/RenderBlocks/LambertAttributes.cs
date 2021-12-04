@@ -67,7 +67,7 @@ public struct LambertAttributes
 				return false;
 			}
 
-			reader.Skip(2);
+			reader.Move(2);
 		}
 
 		return true;

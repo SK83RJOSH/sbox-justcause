@@ -11,46 +11,70 @@ public enum Endian
 	Big
 }
 
+public static class EndianExtensions
+{
+	public static bool IsPlatformEndian(this Endian endian)
+	{
+		return endian == Endian.Default || endian == (BitConverter.IsLittleEndian ? Endian.Little : Endian.Big);
+	}
+}
+
 public static class BinaryReaderExtensions
 {
-	public static Endian GetPlatformEndian(this BinaryReader _)
-		=> BitConverter.IsLittleEndian ? Endian.Little : Endian.Big;
+	public static long Tell(this BinaryReader reader)
+		=> reader.BaseStream.Position;
 
-	public static bool IsPlatformEndian(this BinaryReader reader, Endian endian)
-		=> endian == Endian.Default || reader.GetPlatformEndian() == endian;
+	public static void Seek(this BinaryReader reader, long offset, SeekOrigin origin = SeekOrigin.Begin)
+		=> reader.BaseStream.Seek(offset, origin);
+
+	public static void Move(this BinaryReader reader, long offset)
+		=> reader.Seek(offset, SeekOrigin.Current);
 
 	public static bool ReachedPosition(this BinaryReader reader, long position)
-		=> reader.BaseStream.Position >= position;
+		=> reader.Tell() >= position;
 
 	public static bool AtEnd(this BinaryReader reader)
 		=> reader.ReachedPosition(reader.BaseStream.Length);
-
-	public static void Seek(this BinaryReader reader, long offset, SeekOrigin origin = SeekOrigin.Begin)
-		=> reader.Seek(offset, origin);
-
-	public static void Skip(this BinaryReader reader, uint offset)
-		=> reader.Seek(offset, SeekOrigin.Current);
 
 	public static bool Read(this BinaryReader reader, out string value, Endian endian = default)
 		=> reader.Read(out value, Encoding.ASCII, endian);
 
 	public static bool Read<T>(this BinaryReader reader, out T value, Endian endian = default)
 		where T : unmanaged, IComparable
-		=> Read(reader, out value, !reader.IsPlatformEndian(endian));
+		=> Read(reader, out value, !endian.IsPlatformEndian());
 
 	public static bool Read<T>(this BinaryReader reader, out T[] value, int count, Endian endian = default)
 		where T : unmanaged, IComparable
-		=> Read(reader, out value, count, !reader.IsPlatformEndian(endian));
+		=> Read(reader, out value, count, !endian.IsPlatformEndian());
 
 	public static bool Read<T>(this BinaryReader reader, out T[] value, Endian endian = default)
 		where T : unmanaged, IComparable
-		=> Read(reader, out value, !reader.IsPlatformEndian(endian));
+		=> Read(reader, out value, !endian.IsPlatformEndian());
 
 	public static bool Read(this BinaryReader reader, out string value, int length)
 		=> reader.Read(out value, length, Encoding.ASCII);
 
 	public static bool Read(this BinaryReader reader, out string value, int length, Encoding encoding)
 	{
+		bool null_terminated = length < 0;
+
+		if (null_terminated)
+		{
+			length = 0;
+
+			while (reader.Read(out byte character))
+			{
+				++length;
+
+				if (character == 0)
+				{
+					break;
+				}
+			}
+
+			reader.Seek(-length, SeekOrigin.Current);
+		}
+
 		byte[] bytes = reader.ReadBytes(length);
 
 		if (bytes == null || bytes.Length != length)
@@ -60,12 +84,18 @@ public static class BinaryReaderExtensions
 		}
 
 		value = encoding.GetString(bytes);
+
+		if (null_terminated)
+		{
+			value = value.TrimEnd('\0');
+		}
+
 		return true;
 	}
 
 	public static bool Read(this BinaryReader reader, out string value, Encoding encoding, Endian endian = default)
 	{
-		if (!reader.Read(out int length, endian))
+		if (!reader.Read(out int length, endian) || length < 0)
 		{
 			value = default;
 			return false;
