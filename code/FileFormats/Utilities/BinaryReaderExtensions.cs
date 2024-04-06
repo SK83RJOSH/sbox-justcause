@@ -19,6 +19,19 @@ public static class EndianExtensions
 	}
 }
 
+public static class BoolExtensions
+{
+	public static Endian AsEndian(this bool boolean)
+	{
+		if (boolean)
+		{
+			return (BitConverter.IsLittleEndian ? Endian.Big : Endian.Little);
+		}
+
+		return Endian.Default;
+	}
+}
+
 public static class BinaryReaderExtensions
 {
 	public static long Tell(this BinaryReader reader)
@@ -40,15 +53,15 @@ public static class BinaryReaderExtensions
 		=> reader.Read(out value, Encoding.ASCII, endian);
 
 	public static bool Read<T>(this BinaryReader reader, out T value, Endian endian = default)
-		where T : unmanaged, IComparable
+		where T : new()
 		=> Read(reader, out value, !endian.IsPlatformEndian());
 
 	public static bool Read<T>(this BinaryReader reader, out T[] value, int count, Endian endian = default)
-		where T : unmanaged, IComparable
+		where T : new()
 		=> Read(reader, out value, count, !endian.IsPlatformEndian());
 
 	public static bool Read<T>(this BinaryReader reader, out T[] value, Endian endian = default)
-		where T : unmanaged, IComparable
+		where T : new()
 		=> Read(reader, out value, !endian.IsPlatformEndian());
 
 	public static bool Read(this BinaryReader reader, out string value, int length)
@@ -121,8 +134,7 @@ public static class BinaryReaderExtensions
 		};
 	}
 
-	private static bool Read<T>(this BinaryReader reader, out T value, bool reverse)
-		where T : unmanaged
+	private static bool ReadPrimitive<T>(this BinaryReader reader, out T value, bool reverse)
 	{
 		value = default;
 
@@ -180,8 +192,33 @@ public static class BinaryReaderExtensions
 		return true;
 	}
 
+	private static bool ReadBinary<T>(this BinaryReader reader, out T value, bool reverse)
+		where T : new()
+	{
+		value = new();
+		return value is IBinaryReader binary_reader && binary_reader.Read(reader, reverse.AsEndian());
+	}
+
+	private static bool Read<T>(this BinaryReader reader, out T value, bool reverse)
+		where T : new()
+	{
+		Type type = typeof(T);
+
+		if (type.IsPrimitive || type.IsEnum)
+		{
+			return reader.ReadPrimitive(out value, reverse);
+		}
+		else if (typeof(IBinaryReader).IsAssignableFrom(type))
+		{
+			return reader.ReadBinary(out value, reverse);
+		}
+
+		value = default;
+		return false;
+	}
+
 	private static bool Read<T>(this BinaryReader reader, out T[] value, int count, bool reverse)
-		where T : unmanaged
+		where T : new()
 	{
 		value = new T[count];
 
@@ -197,7 +234,7 @@ public static class BinaryReaderExtensions
 	}
 
 	private static bool Read<T>(this BinaryReader reader, out T[] value, bool reverse)
-		where T : unmanaged
+		where T : new()
 	{
 		if (!reader.Read(out int count, reverse))
 		{

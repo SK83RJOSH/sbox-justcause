@@ -600,7 +600,7 @@ public sealed class VehiclePaperdoll
 			{
 				if (part.ResourceDescription.ModelPath != null && part.ResourceDescription.ModelPath != "")
 				{
-					RenderBlockModel entity = new(archive_path, part.ResourceDescription.ModelPath);
+					RenderBlockModel entity = new(archive_path, part.ResourceDescription.ModelPath, part.ResourceDescription.PfxPath);
 
 					if (part.WheelInfo.IsWheel || part.WheelInfo.IsSuspension || part.WheelInfo.IsStaticSuspension)
 					{

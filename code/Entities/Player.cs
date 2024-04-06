@@ -159,7 +159,7 @@ partial class Player : Sandbox.Player
 
 			foreach (string part in files)
 			{
-				RenderBlockModel entity = new(archive_path, part + ".rbm");
+				RenderBlockModel entity = new(archive_path, part + ".lod", null);
 				entity.Position = Position;
 				entity.Rotation = Rotation;
 			}

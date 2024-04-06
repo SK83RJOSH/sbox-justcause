@@ -1,0 +1,82 @@
+HEADER
+{
+	CompileTargets = ( IS_SM_50 && ( PC || VULKAN ) );
+	Description = "Just Cause 2 General RBM";
+    Version = 1;
+}
+
+FEATURES
+{
+	#include "common/features.hlsl"
+}
+
+MODES
+{
+    VrForward();													// Indicates this shader will be used for main rendering
+    Depth( "vr_depth_only.vfx" ); 									// Shader that will be used for shadowing and depth prepass
+    ToolsVis( S_MODE_TOOLS_VIS ); 									// Ability to see in the editor
+    ToolsWireframe( "vr_tools_wireframe.vfx" ); 					// Allows for mat_wireframe to work
+	ToolsShadingComplexity( "vr_tools_shading_complexity.vfx" ); 	// Shows how expensive drawing is in debug view
+}
+
+COMMON
+{
+	#include "common/shared.hlsl"
+
+    #define F_FOG 1
+    #define F_LIT_FOG 1
+    #define F_FOG_GRADIENT 1
+    #define S_TRANSLUCENT 1
+    #define S_SPECULAR 1
+    #define S_SPECULAR_CUBE_MAP 1
+    #define BLEND_MODE_ALREADY_SET
+}
+
+struct VertexInput
+{
+	#include "common/vertexinput.hlsl"
+	float4 vColor : COLOR0 < Semantic( Color ); >;
+};
+
+struct PixelInput
+{
+	#include "common/pixelinput.hlsl"
+};
+
+VS
+{
+	#include "common/vertex.hlsl"
+
+	PixelInput MainVs( INSTANCED_SHADER_PARAMS( VS_INPUT i ) )
+	{
+		PixelInput o = ProcessVertex( i );
+		
+		o.vVertexColor.rgb = SrgbGammaToLinear( i.vColor.rgb );
+		o.vVertexColor.a =  i.vColor.a;
+
+		return FinalizeVertex( o );
+	}
+}
+
+PS
+{
+	#include "common/pixel.hlsl"
+	CreateTexture2DWithoutSampler( g_tProperties ) < COLOR_TEXTURE_CHANNELS; OutputFormat( BC7 ); SrgbRead( true ); >;
+
+	PS_OUTPUT MainPs( PixelInput i )
+	{
+		float2 vUV = i.vTextureCoords.xy;
+		float3 vProperties = Tex2DS( g_tProperties, TextureFiltering, vUV );
+		vProperties.r = 1.0 - vProperties.r;
+
+		Material m = ToMaterial(
+			Tex2DS( g_tColor, TextureFiltering, vUV ), 
+			Tex2DS( g_tNormal, TextureFiltering, vUV ) * float4(1, -1, 1, 1) + float4(0, 1, 0, 0), // Inverse Up(G)
+			Tex2DS( g_tRma, TextureFiltering, vUV ), 
+			//float4(vProperties, 0.0),
+			g_flTintColor
+		);
+		m.Albedo.rgb *= i.vVertexColor.rgb;
+		return FinalizePixelMaterial( i, m );
+	}
+}

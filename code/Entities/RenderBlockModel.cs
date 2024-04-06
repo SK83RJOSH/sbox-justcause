@@ -1,11 +1,10 @@
 namespace JustCause.Entities;
 
+using JustCause.FileFormats.Physics;
 using JustCause.FileFormats.Utilities;
 using JustCause.Resources;
 using Sandbox;
-using System.Collections.Generic;
 using System.IO;
-using System.Text;
 
 [Library]
 public partial class RenderBlockModel : AnimEntity
@@ -14,7 +13,10 @@ public partial class RenderBlockModel : AnimEntity
 	public string ArchivePath { get; private set; }
 
 	[Net]
-	public string ArchiveFileName { get; private set; }
+	public string LodFileName { get; private set; }
+
+	[Net]
+	public string PfxFileName { get; private set; }
 
 	private ResourceLoader ResourceLoader = new();
 
@@ -23,10 +25,11 @@ public partial class RenderBlockModel : AnimEntity
 
 	}
 
-	public RenderBlockModel(string archive_path, string archive_file_name)
+	public RenderBlockModel(string archive_path, string lod_file_name, string pfx_file_name)
 	{
 		ArchivePath = archive_path;
-		ArchiveFileName = archive_file_name;
+		LodFileName = lod_file_name;
+		PfxFileName = pfx_file_name;
 	}
 
 	public override void ClientSpawn()
@@ -36,20 +39,19 @@ public partial class RenderBlockModel : AnimEntity
 		ResourceLoader.LoadArchive("assets\\general.blz");
 		var archive = ResourceLoader.LoadArchive(ArchivePath);
 
-		if (!archive.TryGetFile(ArchiveFileName, out MemoryStream stream))
+		if (!archive.TryGetFile(LodFileName, out MemoryStream lod_stream))
 		{
 			return;
 		}
 
-		List<byte> characters = new();
-		BinaryReader reader = new(stream);
+		BinaryReader lod_reader = new(lod_stream);
 
-		while (reader.Read(out byte character) && (character != '\r' || character == '\n'))
+		if (!lod_reader.Read(out string lod, -1))
 		{
-			characters.Add(character);
+			return;
 		}
 
-		string lod = Encoding.ASCII.GetString(characters.ToArray());
+		lod = lod.Split('\r')[0];
 
 		if (lod != "")
 		{
@@ -60,5 +62,27 @@ public partial class RenderBlockModel : AnimEntity
 				SetModel(model);
 			}
 		}
+
+		if (PfxFileName?.Length == 0 || !archive.TryGetFile(PfxFileName, out MemoryStream pfx_stream))
+		{
+			return;
+		}
+
+
+		BinaryReader pfx_reader = new(pfx_stream);
+
+		if (!PfxHeader.Read(pfx_reader, out PfxHeader header, default))
+		{
+			return;
+		}
+
+		Log.Info(header.Type);
+
+		if (!Packfile.Read(pfx_reader, out Packfile packfile))
+		{
+			return;
+		}
+
+		Log.Info(packfile.Header.ContentsVersion);
 	}
 }
